@@ -8,6 +8,24 @@ export function useCountdown(onComplete) {
   const endTimeRef = useRef(0);
   const intervalRef = useRef(null);
   const completedRef = useRef(false);
+  // Mirrors of state for use inside stable callbacks (avoids stale closures)
+  const remainingRef = useRef(0);
+  const isRunningRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  const setRemainingSynced = useCallback((ms) => {
+    remainingRef.current = ms;
+    setRemaining(ms);
+  }, []);
+
+  const setRunningSynced = useCallback((val) => {
+    isRunningRef.current = val;
+    setIsRunning(val);
+  }, []);
 
   const clear = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -16,63 +34,71 @@ export function useCountdown(onComplete) {
 
   const tick = useCallback(() => {
     const rem = Math.max(0, endTimeRef.current - Date.now());
-    setRemaining(rem);
+    setRemainingSynced(rem);
     if (rem <= 0 && !completedRef.current) {
       completedRef.current = true;
-      setIsRunning(false);
+      setRunningSynced(false);
       clear();
-      onComplete && onComplete();
+      onCompleteRef.current && onCompleteRef.current();
     }
-  }, [onComplete]);
+  }, [setRemainingSynced, setRunningSynced]);
 
   const start = useCallback(
     (durationMs) => {
       setTotal(durationMs);
       endTimeRef.current = Date.now() + durationMs;
       completedRef.current = false;
-      setIsRunning(true);
-      setRemaining(durationMs);
+      setRunningSynced(true);
+      setRemainingSynced(durationMs);
       clear();
       intervalRef.current = setInterval(tick, 100);
     },
-    [tick]
+    [tick, setRemainingSynced, setRunningSynced]
   );
 
   const pause = useCallback(() => {
     clear();
     const rem = Math.max(0, endTimeRef.current - Date.now());
-    setRemaining(rem);
-    setIsRunning(false);
+    setRemainingSynced(rem);
+    setRunningSynced(false);
     return rem;
-  }, []);
+  }, [setRemainingSynced, setRunningSynced]);
 
   const resume = useCallback(() => {
-    if (remaining <= 0) return;
-    endTimeRef.current = Date.now() + remaining;
+    if (remainingRef.current <= 0) return 0;
+    endTimeRef.current = Date.now() + remainingRef.current;
     completedRef.current = false;
-    setIsRunning(true);
+    setRunningSynced(true);
     clear();
     intervalRef.current = setInterval(tick, 100);
-  }, [remaining, tick]);
+    return remainingRef.current;
+  }, [tick, setRunningSynced]);
 
   const reset = useCallback(() => {
     clear();
-    setIsRunning(false);
-    setRemaining(0);
+    setRunningSynced(false);
+    setRemainingSynced(0);
     setTotal(0);
     completedRef.current = false;
-  }, []);
+  }, [setRemainingSynced, setRunningSynced]);
 
-  const addTime = useCallback((ms) => {
-    if (isRunning) {
-      endTimeRef.current += ms;
+  // Returns the new accurate remaining time in ms
+  const addTime = useCallback(
+    (ms) => {
+      if (isRunningRef.current) {
+        endTimeRef.current += ms;
+        const rem = Math.max(0, endTimeRef.current - Date.now());
+        setTotal((t) => t + ms);
+        setRemainingSynced(rem);
+        return rem;
+      }
+      const rem = remainingRef.current + ms;
       setTotal((t) => t + ms);
-      setRemaining((r) => r + ms);
-    } else {
-      setTotal((t) => t + ms);
-      setRemaining((r) => r + ms);
-    }
-  }, [isRunning]);
+      setRemainingSynced(rem);
+      return rem;
+    },
+    [setRemainingSynced]
+  );
 
   useEffect(() => clear, []);
 

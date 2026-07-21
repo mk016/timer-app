@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ACCENTS, DEFAULT_ACCENT } from '../theme';
 
@@ -10,6 +10,9 @@ export function SettingsProvider({ children }) {
   const [soundOn, setSoundOn] = useState(true);
   const [fontStyle, setFontStyle] = useState('modern'); // 'modern' | 'mono' | 'classic'
 
+  // Always-fresh copy of settings so rapid consecutive updates can't overwrite each other
+  const latestRef = useRef({ accentKey: DEFAULT_ACCENT, soundOn: true, fontStyle: 'modern' });
+
   useEffect(() => {
     (async () => {
       try {
@@ -19,6 +22,11 @@ export function SettingsProvider({ children }) {
           if (s.accentKey) setAccentKey(s.accentKey);
           if (typeof s.soundOn === 'boolean') setSoundOn(s.soundOn);
           if (s.fontStyle) setFontStyle(s.fontStyle);
+          latestRef.current = {
+            accentKey: s.accentKey || DEFAULT_ACCENT,
+            soundOn: typeof s.soundOn === 'boolean' ? s.soundOn : true,
+            fontStyle: s.fontStyle || 'modern',
+          };
         }
       } catch {
         // ignore
@@ -26,27 +34,24 @@ export function SettingsProvider({ children }) {
     })();
   }, []);
 
-  const persist = async (next) => {
-    try {
-      await AsyncStorage.setItem(KEY, JSON.stringify(next));
-    } catch {
-      // ignore
-    }
+  const persist = (partial) => {
+    latestRef.current = { ...latestRef.current, ...partial };
+    AsyncStorage.setItem(KEY, JSON.stringify(latestRef.current)).catch(() => {});
   };
 
   const updateAccent = (key) => {
     setAccentKey(key);
-    persist({ accentKey: key, soundOn, fontStyle });
+    persist({ accentKey: key });
   };
 
   const updateSound = (val) => {
     setSoundOn(val);
-    persist({ accentKey, soundOn: val, fontStyle });
+    persist({ soundOn: val });
   };
 
   const updateFontStyle = (style) => {
     setFontStyle(style);
-    persist({ accentKey, soundOn, fontStyle: style });
+    persist({ fontStyle: style });
   };
 
   const accent = ACCENTS[accentKey] || ACCENTS[DEFAULT_ACCENT];

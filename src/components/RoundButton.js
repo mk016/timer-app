@@ -4,7 +4,7 @@ import Animated, { useSharedValue, withSpring, useAnimatedStyle } from 'react-na
 import { COLORS, FONT_BOLD } from '../theme';
 import { useSettings } from '../context/SettingsContext';
 
-export default function RoundButton({ label, onPress, variant = 'primary', style, compact }) {
+export default function RoundButton({ label, onPress, variant = 'primary', style, compact, disabled }) {
   const { accent } = useSettings();
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
@@ -17,17 +17,17 @@ export default function RoundButton({ label, onPress, variant = 'primary', style
   };
 
   const isPrimary = variant === 'primary';
-  const isGlass = variant === 'glass';
   const height = compact ? 52 : 62;
   const minW = compact ? 100 : 140;
 
   return (
-    <Animated.View style={[animatedStyle, style]}>
+    <Animated.View style={[animatedStyle, style, disabled && { opacity: 0.4 }]}>
       <TouchableOpacity
         activeOpacity={0.85}
-        onPress={onPress}
-        onPressIn={pressIn}
-        onPressOut={pressOut}
+        onPress={disabled ? undefined : onPress}
+        onPressIn={disabled ? undefined : pressIn}
+        onPressOut={disabled ? undefined : pressOut}
+        disabled={disabled}
       >
         {isPrimary ? (
           <View
@@ -41,7 +41,7 @@ export default function RoundButton({ label, onPress, variant = 'primary', style
         ) : (
           <View style={[styles.glassWrap, { height, minWidth: minW }]}>
             <BlurView intensity={25} tint="dark" style={styles.blurFill}>
-              <Text style={[styles.label, { color: isGlass ? COLORS.text : COLORS.text }]}>
+              <Text style={[styles.label, { color: COLORS.text }]}>
                 {label}
               </Text>
             </BlurView>

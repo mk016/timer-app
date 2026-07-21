@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONT_BOLD, FONT_MEDIUM, FONT_SEMIBOLD, ACCENTS } from '../theme';
 import { useSettings } from '../context/SettingsContext';
 
@@ -17,6 +18,7 @@ function Toggle({ value, onToggle, accent }) {
 
 export default function SettingsScreen() {
   const { accent, accentKey, soundOn, fontStyle, setAccent, setSound, setFontStyle } = useSettings();
+  const insets = useSafeAreaInsets();
 
   const FONT_OPTIONS = [
     { key: 'modern', name: 'Modern' },
@@ -27,7 +29,10 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + 16 }]}
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={styles.pageTitle}>Settings</Text>
 
       <Text style={styles.heading}>Accent</Text>
@@ -99,7 +104,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    paddingTop: 60,
     paddingHorizontal: 24,
     paddingBottom: 30,
   },

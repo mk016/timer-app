@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, FlatList } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStopwatch } from '../hooks/useStopwatch';
 import RoundButton from '../components/RoundButton';
 import { formatLap } from '../utils/format';
@@ -9,6 +9,7 @@ import { buzzImpact } from '../lib/notifications';
 
 export default function StopwatchScreen() {
   const { accent } = useSettings();
+  const insets = useSafeAreaInsets();
   const { elapsed, isRunning, laps, start, pause, reset, lap } = useStopwatch();
 
   const handleStartPause = () => {
@@ -23,7 +24,7 @@ export default function StopwatchScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
       <View style={styles.display}>
         <Text style={[styles.time, { color: accent.from }]}>{formatLap(elapsed)}</Text>
         <Text style={styles.tag}>{isRunning ? '● Running' : elapsed > 0 ? '❚❚ Paused' : 'Ready'}</Text>
@@ -36,7 +37,7 @@ export default function StopwatchScreen() {
           onPress={handleStartPause}
         />
         <View style={styles.row}>
-          <RoundButton label="Lap" variant="glass" onPress={lap} compact />
+          <RoundButton label="Lap" variant="glass" onPress={lap} disabled={!isRunning && elapsed === 0} compact />
           <View style={{ width: 12 }} />
           <RoundButton label="Reset" variant="glass" onPress={handleReset} compact />
         </View>
@@ -68,7 +69,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    paddingTop: 80,
   },
   display: {
     alignItems: 'center',

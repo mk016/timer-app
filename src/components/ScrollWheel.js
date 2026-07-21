@@ -19,13 +19,24 @@ export default function ScrollWheel({ value, min, max, onChange }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleEnd = (e) => {
-    const offset = e.nativeEvent.contentOffset.y;
+  const settleAtOffset = (offset) => {
     let idx = Math.round(offset / ITEM_H);
     idx = Math.min(count - 1, Math.max(0, idx));
     const newVal = min + idx;
     if (newVal !== value) onChange(newVal);
     scrollRef.current?.scrollTo({ y: idx * ITEM_H, animated: true });
+  };
+
+  const handleEnd = (e) => {
+    settleAtOffset(e.nativeEvent.contentOffset.y);
+  };
+
+  // Slow drags (no fling) never trigger onMomentumScrollEnd — settle them here
+  const handleDragEnd = (e) => {
+    const vy = e.nativeEvent.velocity?.y ?? 0;
+    if (Math.abs(vy) < 0.05) {
+      settleAtOffset(e.nativeEvent.contentOffset.y);
+    }
   };
 
   return (
@@ -36,6 +47,7 @@ export default function ScrollWheel({ value, min, max, onChange }) {
         decelerationRate="fast"
         showsVerticalScrollIndicator={false}
         onMomentumScrollEnd={handleEnd}
+        onScrollEndDrag={handleDragEnd}
         contentContainerStyle={{ paddingVertical: ITEM_H * 2 }}
       >
         {items.map((v) => (

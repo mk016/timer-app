@@ -18,7 +18,7 @@ export function formatStopwatch(ms) {
 }
 
 export function formatLap(ms) {
-  return formatStopwatch(ms).replace(/\.(\d{2})$/, '.$1');
+  return formatStopwatch(ms);
 }
 
 export function secondsToHMS(seconds) {

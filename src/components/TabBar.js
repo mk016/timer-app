@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Svg, { Circle, Line, Rect, Path } from 'react-native-svg';
 import Animated, { useSharedValue, withSpring, useAnimatedStyle } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONT_SEMIBOLD } from '../theme';
 import { useSettings } from '../context/SettingsContext';
 
@@ -60,21 +62,23 @@ const TABS = [
 export default function TabBar({ active, onChange }) {
   const { accent } = useSettings();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const index = TABS.findIndex((t) => t.key === active);
   const tabWidth = (width - 40) / TABS.length;
   const pillX = useSharedValue(index * tabWidth);
+
+  // Keep the pill aligned when the screen rotates / resizes or the tab changes externally
+  useEffect(() => {
+    pillX.value = index * tabWidth;
+  }, [index, tabWidth, pillX]);
 
   const animatedPill = useAnimatedStyle(() => {
     return { transform: [{ translateX: withSpring(pillX.value, { damping: 20, stiffness: 180 }) }] };
   });
 
-  const movePill = (idx) => {
-    pillX.value = idx * tabWidth;
-  };
-
   return (
-    <View style={styles.wrapper}>
-      <BlurView intensity={40} tint="dark" style={styles.bar}>
+    <View style={[styles.wrapper, { marginBottom: Math.max(insets.bottom, 8) }]}>
+      <BlurView intensity={40} tint="dark" style={[styles.bar, { paddingBottom: 12 }]}>
         <Animated.View
           style={[
             styles.pill,
@@ -83,16 +87,13 @@ export default function TabBar({ active, onChange }) {
           ]}
           pointerEvents="none"
         />
-        {TABS.map(({ key, label, Icon }, i) => {
+        {TABS.map(({ key, label, Icon }) => {
           const isActive = active === key;
           return (
             <TouchableOpacity
               key={key}
               activeOpacity={0.7}
-              onPress={() => {
-                movePill(i);
-                onChange(key);
-              }}
+              onPress={() => onChange(key)}
               style={styles.tab}
             >
               <Icon color={isActive ? accent.from : COLORS.textDim} />

@@ -5,6 +5,8 @@ import Animated, {
   FadeIn,
   FadeOut,
 } from 'react-native-reanimated';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCountdown } from '../hooks/useCountdown';
 import ProgressRing from '../components/ProgressRing';
 import RoundButton from '../components/RoundButton';
@@ -22,10 +24,11 @@ import {
 } from '../lib/notifications';
 import { playChime } from '../lib/audio';
 
-export default function TimerScreen({ pendingRef, onImmersive }) {
+export default function TimerScreen({ presetRequest, onImmersive }) {
   const { accent, soundOn, fontStyle } = useSettings();
   const { width: screenW, height: screenH } = useWindowDimensions();
-  const [draft, setDraft] = useState({ h: 0, m: 5, s: 0 });
+  const insets = useSafeAreaInsets();
+  const [draft, setDraft] = useState({ h: 0, m: 0, s: 0 });
   const [finished, setFinished] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [viewMode, setViewMode] = useState('flip'); // 'flip' | 'oled' | 'ring'
@@ -34,8 +37,11 @@ export default function TimerScreen({ pendingRef, onImmersive }) {
 
   const { remaining, total, isRunning, start, pause, resume, reset, addTime } = useCountdown(() => {
     setFinished(true);
+    setControlsVisible(true); // ensure the Done button is visible on completion
     buzzComplete();
     if (soundOn) playChime();
+    // The timer already completed in-app; no pending notification needed
+    cancelAllNotifications();
   });
 
   useEffect(() => {
@@ -43,19 +49,20 @@ export default function TimerScreen({ pendingRef, onImmersive }) {
     requestNotificationPermission();
   }, []);
 
+  // Apply a preset tapped on the Presets tab
   useEffect(() => {
-    if (pendingRef?.current != null) {
-      const secs = pendingRef.current;
-      pendingRef.current = null;
+    if (presetRequest?.seconds > 0) {
+      const secs = presetRequest.seconds;
       setDraft({
         h: Math.floor(secs / 3600),
         m: Math.floor((secs % 3600) / 60),
         s: secs % 60,
       });
       setFinished(false);
+      cancelAllNotifications();
       reset();
     }
-  }, [pendingRef, reset]);
+  }, [presetRequest, reset]);
 
   const draftSeconds = hmsToSeconds(draft);
   const active = remaining > 0 || isRunning;
@@ -64,6 +71,16 @@ export default function TimerScreen({ pendingRef, onImmersive }) {
   useEffect(() => {
     onImmersive?.(active || finished);
   }, [active, finished, onImmersive]);
+
+  // Keep the screen awake while the timer is visible in immersive mode
+  useEffect(() => {
+    if (active || finished) {
+      activateKeepAwakeAsync('timer').catch(() => {});
+    } else {
+      deactivateKeepAwake('timer');
+    }
+    return () => deactivateKeepAwake('timer');
+  }, [active, finished]);
 
   const handleStart = async () => {
     if (draftSeconds <= 0) return;
@@ -75,14 +92,20 @@ export default function TimerScreen({ pendingRef, onImmersive }) {
     await scheduleEndNotification(draftSeconds, 'Timer');
   };
 
-  const handlePause = () => {
+  const handlePause = async () => {
     buzzImpact('light');
     pause();
+    // A paused timer must not fire its "Time's up" notification
+    await cancelAllNotifications();
   };
 
-  const handleResume = () => {
+  const handleResume = async () => {
     buzzImpact();
-    resume();
+    const rem = resume();
+    if (rem > 0) {
+      await cancelAllNotifications();
+      await scheduleEndNotification(Math.ceil(rem / 1000), 'Timer');
+    }
   };
 
   const handleReset = async () => {
@@ -93,9 +116,11 @@ export default function TimerScreen({ pendingRef, onImmersive }) {
   };
 
   const handleAdd = async (ms) => {
-    await cancelAllNotifications();
-    addTime(ms);
-    if (isRunning) await scheduleEndNotification(Math.ceil((remaining + ms) / 1000), 'Timer');
+    const newRemaining = addTime(ms);
+    if (isRunning && newRemaining > 0) {
+      await cancelAllNotifications();
+      await scheduleEndNotification(Math.ceil(newRemaining / 1000), 'Timer');
+    }
   };
 
   const progress = total > 0 ? remaining / total : 0;
@@ -133,10 +158,10 @@ export default function TimerScreen({ pendingRef, onImmersive }) {
     const isLandscape = screenW > screenH;
     const ringSize = isLandscape ? Math.min(screenH - 120, 240) : Math.min(screenW - 48, 300);
     const cardHeight = Math.min((screenH - 260) / 2, 230);
-    
+
     // Calculate landscape-specific horizontal flip card dimensions
-    const horizontalCardSize = isLandscape 
-      ? Math.min(screenW * 0.36, screenH * 0.65) 
+    const horizontalCardSize = isLandscape
+      ? Math.min(screenW * 0.36, screenH * 0.65)
       : Math.min(screenW * 0.42, 170);
 
     return (
@@ -153,9 +178,9 @@ export default function TimerScreen({ pendingRef, onImmersive }) {
             </View>
           ) : (
             <View style={[styles.mainContent, isLandscape && styles.mainContentLandscape]}>
-              <TouchableOpacity 
-                activeOpacity={0.9} 
-                onPress={handleToggleStyle} 
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={handleToggleStyle}
                 style={[styles.modeContainer, isLandscape && styles.modeContainerLandscape]}
               >
                 {/* Automatically adjust Flip clock style based on phone position */}
@@ -167,7 +192,7 @@ export default function TimerScreen({ pendingRef, onImmersive }) {
                       <Text style={[styles.flipNumberHorizontal, { color: accent.from, fontFamily: fonts.bold, fontSize: isLandscape ? 90 : 76 }]}>{topVal}</Text>
                       <Text style={[styles.flipLabelHorizontal, { fontFamily: fonts.medium }]}>{topLabel.slice(0, 3)}</Text>
                     </View>
-                    
+
                     <Text style={[styles.flipColon, { color: accent.from, fontFamily: fonts.bold, fontSize: isLandscape ? 64 : 54 }]}>:</Text>
 
                     {/* Right card */}
@@ -219,7 +244,7 @@ export default function TimerScreen({ pendingRef, onImmersive }) {
                 )}
               </TouchableOpacity>
               {controlsVisible && (
-                <Text style={[styles.toggleHint, { fontFamily: fonts.medium, marginTop: isLandscape ? 10 : 20 }]}>Tap screen to toggle layout</Text>
+                <Text style={[styles.toggleHint, { fontFamily: fonts.medium, marginTop: isLandscape ? 10 : 20 }]}>Tap time to change style · tap outside to hide controls</Text>
               )}
             </View>
           )}
@@ -230,7 +255,11 @@ export default function TimerScreen({ pendingRef, onImmersive }) {
           <Animated.View
             entering={FadeIn.duration(200)}
             exiting={FadeOut.duration(200)}
-            style={[styles.immersiveControls, isLandscape && styles.immersiveControlsLandscape]}
+            style={[
+              styles.immersiveControls,
+              isLandscape && styles.immersiveControlsLandscape,
+              { bottom: Math.max(insets.bottom, 12) + 12 },
+            ]}
           >
             <View style={styles.glassBarWrap}>
               <BlurView intensity={30} tint="dark" style={[styles.glassBar, isLandscape && styles.glassBarLandscape]}>
@@ -263,7 +292,7 @@ export default function TimerScreen({ pendingRef, onImmersive }) {
 
   // ── SETUP MODE ──
   return (
-    <View style={styles.setup}>
+    <View style={[styles.setup, { paddingTop: insets.top }]}>
       <Text style={[styles.setupTitle, { fontFamily: fonts.bold }]}>Set Timer</Text>
       <Text style={[styles.setupSub, { fontFamily: fonts.medium }]}>Choose your duration</Text>
 
@@ -276,7 +305,7 @@ export default function TimerScreen({ pendingRef, onImmersive }) {
       <TimePicker value={draft} onChange={setDraft} />
 
       <View style={{ height: 28 }} />
-      <RoundButton label="Start" variant="primary" onPress={handleStart} />
+      <RoundButton label="Start" variant="primary" onPress={handleStart} disabled={draftSeconds <= 0} />
     </View>
   );
 }
@@ -513,7 +542,6 @@ const styles = StyleSheet.create({
   },
   immersiveControlsLandscape: {
     position: 'absolute',
-    bottom: 12,
     width: '90%',
     alignSelf: 'center',
   },
@@ -522,4 +550,3 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
 });
-

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Modal } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Modal, Platform, KeyboardAvoidingView } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePresets } from '../hooks/usePresets';
 import PresetCard from '../components/PresetCard';
 import TimePicker from '../components/TimePicker';
@@ -12,6 +13,7 @@ import { buzzImpact } from '../lib/notifications';
 
 export default function PresetsScreen({ onStartPreset }) {
   const { accent } = useSettings();
+  const insets = useSafeAreaInsets();
   const { presets, addPreset, removePreset } = usePresets();
   const [modalVisible, setModalVisible] = useState(false);
   const [name, setName] = useState('');
@@ -33,7 +35,7 @@ export default function PresetsScreen({ onStartPreset }) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Presets</Text>
         <TouchableOpacity activeOpacity={0.8} onPress={openModal} style={styles.addBtnWrap}>
@@ -43,39 +45,53 @@ export default function PresetsScreen({ onStartPreset }) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.list}>
-        {presets.map((preset) => (
-          <PresetCard
-            key={preset.id}
-            preset={preset}
-            onPress={() => onStartPreset(preset.seconds)}
-            onDelete={() => removePreset(preset.id)}
-          />
-        ))}
-      </ScrollView>
+      {presets.length > 0 ? (
+        <ScrollView contentContainerStyle={styles.list}>
+          {presets.map((preset) => (
+            <PresetCard
+              key={preset.id}
+              preset={preset}
+              onPress={() => onStartPreset(preset.seconds)}
+              onDelete={() => removePreset(preset.id)}
+            />
+          ))}
+        </ScrollView>
+      ) : (
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyTitle}>No presets added</Text>
+          <Text style={styles.emptySub}>Tap "+ New" above to save your custom timers.</Text>
+        </View>
+      )}
 
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.overlay}>
-          <View style={styles.sheetWrap}>
-            <BlurView intensity={40} tint="dark" style={styles.sheet}>
-              <Text style={styles.sheetTitle}>New Preset</Text>
-              <View style={styles.inputWrap}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Name (e.g. Meditation)"
-                  placeholderTextColor={COLORS.textFaint}
-                  value={name}
-                  onChangeText={setName}
-                />
-              </View>
-              <TimePicker value={draft} onChange={setDraft} />
-              <View style={styles.sheetActions}>
-                <RoundButton label="Cancel" variant="glass" onPress={() => setModalVisible(false)} compact />
-                <RoundButton label="Save" variant="primary" onPress={savePreset} compact />
-              </View>
-            </BlurView>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.overlay}>
+            <View style={styles.sheetWrap}>
+              <BlurView intensity={40} tint="dark" style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 24) + 16 }]}>
+                <Text style={styles.sheetTitle}>New Preset</Text>
+                <View style={styles.inputWrap}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Name (e.g. Meditation)"
+                    placeholderTextColor={COLORS.textFaint}
+                    value={name}
+                    onChangeText={setName}
+                    maxLength={40}
+                    returnKeyType="done"
+                  />
+                </View>
+                <TimePicker value={draft} onChange={setDraft} />
+                <View style={styles.sheetActions}>
+                  <RoundButton label="Cancel" variant="glass" onPress={() => setModalVisible(false)} compact />
+                  <RoundButton label="Save" variant="primary" onPress={savePreset} compact />
+                </View>
+              </BlurView>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -84,7 +100,6 @@ export default function PresetsScreen({ onStartPreset }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
   },
   header: {
     flexDirection: 'row',
@@ -115,6 +130,26 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 24,
     paddingBottom: 30,
+  },
+  emptyWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    marginTop: 60,
+  },
+  emptyTitle: {
+    fontFamily: FONT_BOLD,
+    fontSize: 18,
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  emptySub: {
+    fontFamily: FONT_MEDIUM,
+    fontSize: 14,
+    color: COLORS.textDim,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   overlay: {
     flex: 1,

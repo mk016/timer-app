@@ -1,10 +1,14 @@
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
 
+// When the app is in the foreground the in-app "Time's up" screen + chime
+// already notify the user, so suppress the system banner/sound to avoid
+// double alerts. In the background the system shows the notification normally.
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
+    shouldShowBanner: false,
+    shouldShowList: false,
+    shouldPlaySound: false,
     shouldSetBadge: false,
   }),
 });
@@ -57,7 +61,7 @@ export async function cancelAllNotifications() {
 
 export function buzzComplete() {
   try {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
   } catch {
     // no-op
   }
@@ -65,7 +69,7 @@ export function buzzComplete() {
 
 export function buzzImpact(style = Haptics.ImpactFeedbackStyle.Medium) {
   try {
-    Haptics.impactAsync(style);
+    Haptics.impactAsync(style).catch(() => {});
   } catch {
     // no-op
   }

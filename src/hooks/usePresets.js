@@ -8,7 +8,7 @@ export function usePresets() {
   useEffect(() => {
     (async () => {
       const stored = await loadPresets();
-      if (stored && stored.length) setPresets(stored);
+      if (Array.isArray(stored)) setPresets(stored);
     })();
   }, []);
 

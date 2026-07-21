@@ -44,6 +44,7 @@ export function useStopwatch() {
   }, []);
 
   const lap = useCallback(() => {
+    if (!isRunning && baseRef.current === 0) return; // ignore laps before starting
     const current = baseRef.current + (isRunning ? Date.now() - startRef.current : 0);
     setLaps((prev) => {
       const last = prev.length ? prev[prev.length - 1].total : 0;

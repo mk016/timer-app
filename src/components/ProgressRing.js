@@ -28,6 +28,11 @@ export default function ProgressRing({
     return { strokeDashoffset: circumference * (1 - p) };
   });
 
+  const glowAnimatedProps = useAnimatedProps(() => {
+    const p = Math.min(1, Math.max(0, progressSv.value));
+    return { strokeDashoffset: circumference * (1 - p) };
+  });
+
   return (
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
@@ -47,7 +52,7 @@ export default function ProgressRing({
           strokeLinecap="round"
           fill="none"
           strokeDasharray={circumference}
-          strokeDashoffset={circumference * (1 - progress)}
+          animatedProps={glowAnimatedProps}
           opacity={0.5}
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
