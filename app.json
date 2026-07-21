@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Aura Timer",
+    "slug": "aura-timer",
+    "version": "1.0.0",
+    "orientation": "default",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#0A0A0A",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.auratimer.app"
+    },
+    "android": {
+      "package": "com.auratimer.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0A0A0A"
+      }
+    },
+    "plugins": [
+      "expo-notifications",
+      "expo-font"
+    ]
+  }
+}
