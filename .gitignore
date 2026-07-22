@@ -37,5 +37,6 @@ yarn-error.*
 *.tsbuildinfo
 
 # generated native folders (regenerate with: npx expo prebuild --clean)
-# android/
-# ios/
+android/
+ios/
+

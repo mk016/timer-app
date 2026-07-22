@@ -1,7 +1,0 @@
-** BUILD FAILED **
-
-
-The following build commands failed:
-	PhaseScriptExecution [CP-User]\ Generate\ app.config\ for\ prebuilt\ Constants.manifest /Users/mahi/Library/Developer/Xcode/DerivedData/AuraTimer-bpgygxendjbtavddrrosjtayrndk/Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator/EXConstants.build/Script-46EB2E0001B0B0.sh (in target 'EXConstants' from project 'Pods')
-	Building workspace AuraTimer with scheme AuraTimer and configuration Debug
-(2 failures)
