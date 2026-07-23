@@ -18,11 +18,11 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.auratimer.app",
+      "bundleIdentifier": "com.time.change.your.day",
       "icon": "./assets/icon.png"
     },
     "android": {
-      "package": "com.auratimer.app",
+      "package": "com.time.change.your.day",
       "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

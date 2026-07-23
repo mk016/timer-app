@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google Play Store & App Store Screenshot Generator — Aura Timer</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;700;800&family=Space+Grotesk:wght@600;700&family=Playfair+Display:wght@800&display=swap" rel="stylesheet">
+  <!-- html2canvas for 1-click HD PNG Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <style>
+    :root {
+      --lime: #D4FF00;
+      --lime-bright: #E2FF00;
+      --dark-bg: #0b0c10;
+      --card-width: 430px;
+      --card-height: 932px; /* Exact 1:2.167 ratio corresponding to 1290x2796 px */
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--dark-bg);
+      color: #ffffff;
+      font-family: 'Outfit', sans-serif;
+      padding: 30px 20px 60px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    /* Top Control Bar */
+    .top-controls {
+      text-align: center;
+      max-width: 900px;
+      margin-bottom: 30px;
+      background: #14151c;
+      padding: 24px 30px;
+      border-radius: 20px;
+      border: 1px solid rgba(226, 255, 0, 0.2);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .top-controls h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--lime);
+      letter-spacing: -0.02em;
+    }
+    .top-controls p {
+      color: #a0a5b5;
+      font-size: 14px;
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+    .specs-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 14px;
+      background: rgba(226, 255, 0, 0.1);
+      border: 1px solid var(--lime);
+      padding: 8px 18px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--lime);
+    }
+    .btn-export-all {
+      margin-top: 16px;
+      background: var(--lime);
+      color: #000;
+      border: none;
+      padding: 12px 28px;
+      border-radius: 30px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(212, 255, 0, 0.3);
+      transition: all 0.2s ease;
+    }
+    .btn-export-all:hover {
+      transform: scale(1.04);
+      background: #fff;
+    }
+
+    /* Grid Layout for Screenshots */
+    .screenshots-row {
+      display: flex;
+      gap: 30px;
+      justify-content: center;
+      align-items: flex-start;
+      overflow-x: auto;
+      max-width: 100%;
+      padding: 10px 10px 40px 10px;
+    }
+
+    .screenshot-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Single Screenshot Canvas: 1290x2796 Ratio (430px x 932px) */
+    .screenshot-canvas {
+      width: var(--card-width);
+      height: var(--card-height);
+      border-radius: 36px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.7);
+      flex-shrink: 0;
+      background-size: cover;
+    }
+
+    /* Themes */
+    .bg-yellow {
+      background: linear-gradient(180deg, #E2FF00 0%, #D4FF00 100%);
+      color: #000000;
+    }
+    .bg-dark {
+      background: linear-gradient(180deg, #15161b 0%, #090a0d 100%);
+      color: #ffffff;
+    }
+
+    /* Header / Badge Area */
+    .canvas-header {
+      padding: 36px 28px 12px 28px;
+      z-index: 3;
+    }
+    .pill-badge {
+      display: inline-block;
+      background: #000000;
+      color: #ffffff;
+      padding: 8px 20px;
+      border-radius: 40px;
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.18);
+      letter-spacing: 0.02em;
+    }
+    .bg-dark .pill-badge {
+      background: var(--lime);
+      color: #000000;
+    }
+    .headline-text {
+      font-size: 32px;
+      font-weight: 900;
+      line-height: 1.12;
+      letter-spacing: -0.03em;
+    }
+    .bg-yellow .headline-text { color: #000000; }
+    .bg-dark .headline-text { color: #ffffff; }
+
+    /* iPhone 15 Pro Hardware Frame Mockup */
+    .phone-stage {
+      position: relative;
+      width: 90%;
+      margin: 0 auto;
+      flex-grow: 1;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 2;
+    }
+    .iphone-device {
+      width: 100%;
+      height: 96%;
+      background: #000;
+      border-radius: 44px 44px 0 0;
+      border: 6px solid #2d2e36;
+      border-bottom: none;
+      box-shadow: 
+        0 -10px 40px rgba(0,0,0,0.4),
+        inset 0 0 0 2px rgba(255,255,255,0.1);
+      position: relative;
+      overflow: hidden;
+      padding: 10px 10px 0 10px;
+      display: flex;
+      flex-direction: column;
+    }
+    /* Side Hardware Buttons on iPhone Frame */
+    .iphone-device::before {
+      content: '';
+      position: absolute;
+      left: -9px;
+      top: 80px;
+      width: 4px;
+      height: 40px;
+      background: #3a3b45;
+      border-radius: 2px;
+    }
+    .iphone-device::after {
+      content: '';
+      position: absolute;
+      left: -9px;
+      top: 135px;
+      width: 4px;
+      height: 40px;
+      background: #3a3b45;
+      border-radius: 2px;
+    }
+
+    /* iPhone Dynamic Island Notch */
+    .dynamic-island {
+      width: 96px;
+      height: 24px;
+      background: #000000;
+      border-radius: 20px;
+      margin: 2px auto 12px auto;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.8);
+      z-index: 10;
+    }
+    .camera-dot {
+      width: 9px;
+      height: 9px;
+      background: #111425;
+      border-radius: 50%;
+      box-shadow: inset 0 0 2px rgba(255,255,255,0.3);
+    }
+
+    /* Inside App UI Canvas */
+    .app-viewport {
+      background: #0f1015;
+      border-radius: 30px 30px 0 0;
+      height: 100%;
+      padding: 14px;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+    }
+
+    /* Timer Screen UI */
+    .timer-circle-wrap {
+      position: relative;
+      width: 170px;
+      height: 170px;
+      margin: 12px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .timer-circle-svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+    .timer-val {
+      position: absolute;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 32px;
+      font-weight: 800;
+      color: #ffffff;
+      text-shadow: 0 0 15px rgba(212, 255, 0, 0.5);
+    }
+    .preset-chips-row {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+    }
+    .chip {
+      background: #1c1e26;
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #a0a5b5;
+      padding: 5px 12px;
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .chip.active {
+      background: var(--lime);
+      color: #000;
+      border: none;
+    }
+    .btn-main-action {
+      background: linear-gradient(135deg, var(--lime), #b3e600);
+      color: #000;
+      text-align: center;
+      padding: 12px;
+      border-radius: 24px;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+    }
+
+    /* Presets UI */
+    .preset-grid-2x2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 6px;
+    }
+    .preset-item-box {
+      background: #191b24;
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 12px;
+      border-radius: 16px;
+    }
+    .preset-item-box h4 {
+      font-size: 13px;
+      color: #fff;
+      font-weight: 800;
+    }
+    .preset-item-box p {
+      font-size: 11px;
+      color: var(--lime);
+      margin-top: 4px;
+      font-weight: 700;
+    }
+
+    /* Stopwatch UI */
+    .stopwatch-readout {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 36px;
+      font-weight: 900;
+      text-align: center;
+      color: var(--lime);
+      margin: 10px 0;
+      text-shadow: 0 0 10px rgba(212,255,0,0.3);
+    }
+    .laps-container {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .lap-row {
+      display: flex;
+      justify-content: space-between;
+      background: #191b24;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 11px;
+      color: #c0c5d5;
+    }
+
+    /* Audio / Settings UI */
+    .sound-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #1a1c26;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 12px;
+    }
+    .check-icon {
+      color: var(--lime);
+      font-weight: 900;
+    }
+
+    /* Streaks & Stats UI */
+    .streak-banner {
+      background: linear-gradient(135deg, rgba(212,255,0,0.2), rgba(212,255,0,0.03));
+      border: 1px solid rgba(212,255,0,0.4);
+      padding: 14px;
+      border-radius: 16px;
+      text-align: center;
+    }
+    .streak-banner h3 {
+      font-size: 22px;
+      color: var(--lime);
+      font-weight: 900;
+    }
+
+    /* Hand-Drawn Curly Arrow */
+    .hand-arrow {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    /* Press Section at Bottom */
+    .press-section {
+      padding: 16px 20px 24px 20px;
+      text-align: center;
+      z-index: 3;
+    }
+    .press-title {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      opacity: 0.8;
+      margin-bottom: 6px;
+    }
+    .press-logos-row {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      font-family: 'Playfair Display', serif;
+      font-size: 15px;
+      font-weight: 800;
+    }
+    .bg-yellow .press-logos-row { color: #000000; }
+    .bg-dark .press-logos-row { color: #ffffff; }
+
+    /* Single Export Button */
+    .btn-export-single {
+      background: #1f202b;
+      color: var(--lime);
+      border: 1px solid var(--lime);
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-export-single:hover {
+      background: var(--lime);
+      color: #000;
+    }
+
+    .resolution-tag {
+      font-size: 10px;
+      color: #6a6f80;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Controls Header -->
+  <div class="top-controls">
+    <h1>📱 Play Store & App Store Screenshot Generator</h1>
+    <p>Target Resolution: <strong>1290 x 2796 pixels</strong> (9:19.5 Standard Google Play Console & App Store Connect format) with realistic <strong>iPhone 15 Pro Dynamic Island</strong> mockups.</p>
+    
+    <div class="specs-badge">
+      <span>✓ 512×512 Play Store App Icon</span>
+      <span>•</span>
+      <span>✓ 5 Promotional Screenshots (1290×2796)</span>
+      <span>•</span>
+      <span>✓ iPhone 15 Pro Titanium Mockup</span>
+    </div>
+
+    <br>
+    <button class="btn-export-all" onclick="exportAllScreenshots()">⬇ Download All 5 HD Screenshots (1290x2796 PNG)</button>
+  </div>
+
+  <!-- Play Store 512x512 App Icon & Feature Graphic Showcase Card -->
+  <div style="margin-bottom: 40px; width: 100%; max-width: 1000px; background: #14151c; padding: 24px; border-radius: 24px; border: 1px solid rgba(212, 255, 0, 0.25); box-shadow: 0 15px 40px rgba(0,0,0,0.6);">
+    <h2 style="color: var(--lime); font-size: 20px; font-weight: 800; margin-bottom: 6px; text-align: center;">📦 Official Google Play Store Asset Bundle</h2>
+    <p style="color: #a0a5b5; font-size: 13px; margin-bottom: 24px; text-align: center;">Tested & verified 100% compliant with Google Play Console requirements.</p>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;">
+      
+      <!-- 512x512 Icon Card -->
+      <div style="background: #1a1c26; padding: 18px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.06); text-align: center;">
+        <h3 style="font-size: 15px; color: #fff; font-weight: 800; margin-bottom: 12px;">🎨 High-Res App Icon</h3>
+        <div style="width: 140px; height: 140px; border-radius: 30px; overflow: hidden; margin: 0 auto 14px auto; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+          <img src="assets/icon_512x512.png" alt="512x512 App Icon" style="width: 100%; height: 100%; object-fit: cover;">
+        </div>
+        <div style="font-size: 12px; color: var(--lime); font-weight: 700; margin-bottom: 12px;">Resolution: 512 × 512 px (PNG 32-bit)</div>
+        <a href="assets/icon_512x512.png" download="AuraTimer_PlayStore_Icon_512x512.png" class="btn-export-all" style="display: inline-block; text-decoration: none; padding: 8px 18px; font-size: 12px;">⬇ Download 512×512 Icon PNG</a>
+      </div>
+
+      <!-- 1024x500 Feature Graphic Card -->
+      <div style="background: #1a1c26; padding: 18px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.06); text-align: center;">
+        <h3 style="font-size: 15px; color: #fff; font-weight: 800; margin-bottom: 12px;">🖼️ Store Feature Graphic</h3>
+        <div style="width: 100%; height: 140px; border-radius: 14px; overflow: hidden; margin: 0 auto 14px auto; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+          <img src="assets/feature-graphic.png" alt="1024x500 Feature Graphic" style="width: 100%; height: 100%; object-fit: cover;">
+        </div>
+        <div style="font-size: 12px; color: var(--lime); font-weight: 700; margin-bottom: 12px;">Resolution: 1024 × 500 px (PNG)</div>
+        <a href="assets/feature-graphic.png" download="AuraTimer_PlayStore_FeatureGraphic_1024x500.png" class="btn-export-all" style="display: inline-block; text-decoration: none; padding: 8px 18px; font-size: 12px;">⬇ Download 1024×500 Graphic PNG</a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Screenshots Row Container -->
+  <div class="screenshots-row">
+
+    <!-- SCREEN 1: Main Timer Showcase -->
+    <div class="screenshot-wrapper">
+      <div id="shot-1" class="screenshot-canvas bg-yellow">
+        <div class="canvas-header">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+            <img src="assets/icon_512x512.png" alt="Aura Timer Icon" style="width: 44px; height: 44px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 1.5 solid #000;">
+            <div class="pill-badge" style="margin-bottom: 0;">Boost Productivity Today</div>
+          </div>
+          <div class="headline-text">Grow your focus assets<br><strong>AuraTimer</strong></div>
+        </div>
+
+        <!-- Hand drawn arrow -->
+        <svg class="hand-arrow" style="top: 180px; right: 20px;" viewBox="0 0 60 60">
+          <path d="M 10 15 Q 45 10 35 45" stroke="#000" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <path d="M 28 38 L 36 48 L 45 36" stroke="#000" stroke-width="4" fill="none" stroke-linecap="round"/>
+        </svg>
+
+        <div class="phone-stage">
+          <div class="iphone-device">
+            <div class="dynamic-island">
+              <div class="camera-dot"></div>
+            </div>
+            <div class="app-viewport">
+              <div class="preset-chips-row">
+                <div class="chip active">Pomodoro</div>
+                <div class="chip">Short Break</div>
+                <div class="chip">Deep Work</div>
+              </div>
+              <div class="timer-circle-wrap">
+                <svg class="timer-circle-svg" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="42" stroke="#222530" stroke-width="8" fill="none"/>
+                  <circle cx="50" cy="50" r="42" stroke="var(--lime)" stroke-width="8" fill="none" stroke-dasharray="264" stroke-dashoffset="65" stroke-linecap="round"/>
+                </svg>
+                <div class="timer-val">24:59</div>
+              </div>
+              <div class="btn-main-action">START TIMER</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="press-section">
+          <div class="press-title">Featured On</div>
+          <div class="press-logos-row">
+            <span>GQ</span>
+            <span>Economist</span>
+            <span>NYTimes</span>
+            <span>Forbes</span>
+          </div>
+        </div>
+      </div>
+      <button class="btn-export-single" onclick="exportSingle('shot-1', 'AuraTimer_PlayStore_Shot1.png')">Download PNG (1290x2796)</button>
+      <span class="resolution-tag">Dimensions: 1290 × 2796 px</span>
+    </div>
+
+
+    <!-- SCREEN 2: Presets Grid -->
+    <div class="screenshot-wrapper">
+      <div id="shot-2" class="screenshot-canvas bg-yellow">
+        <div class="canvas-header">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+            <img src="assets/icon_512x512.png" alt="Aura Timer Icon" style="width: 44px; height: 44px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+            <div class="pill-badge" style="margin-bottom: 0;">Start Focusing Today</div>
+          </div>
+          <div class="headline-text">Focus anytime<br>anywhere</div>
+        </div>
+
+        <div class="phone-stage">
+          <div class="iphone-device" style="transform: perspective(800px) rotateY(-5deg);">
+            <div class="dynamic-island">
+              <div class="camera-dot"></div>
+            </div>
+            <div class="app-viewport">
+              <div style="font-size: 13px; font-weight: 800; color: #fff;">Quick Presets</div>
+              <div class="preset-grid-2x2">
+                <div class="preset-item-box">
+                  <h4>🍅 Pomodoro</h4>
+                  <p>25m Focus</p>
+                </div>
+                <div class="preset-item-box">
+                  <h4>🧘 Meditation</h4>
+                  <p>15m Calm</p>
+                </div>
+                <div class="preset-item-box">
+                  <h4>🏋️ HIIT Workout</h4>
+                  <p>45s Interval</p>
+                </div>
+                <div class="preset-item-box">
+                  <h4>🍳 Boil Eggs</h4>
+                  <p>6m Timer</p>
+                </div>
+              </div>
+              <div class="btn-main-action" style="margin-top: 10px;">+ CREATE PRESET</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="press-section">
+          <div style="font-size: 12px; font-weight: 700; opacity: 0.7;">Customizable Presets For Every Routine</div>
+        </div>
+      </div>
+      <button class="btn-export-single" onclick="exportSingle('shot-2', 'AuraTimer_PlayStore_Shot2.png')">Download PNG (1290x2796)</button>
+      <span class="resolution-tag">Dimensions: 1290 × 2796 px</span>
+    </div>
+
+
+    <!-- SCREEN 3: Precision Stopwatch -->
+    <div class="screenshot-wrapper">
+      <div id="shot-3" class="screenshot-canvas bg-dark">
+        <div class="canvas-header">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+            <img src="assets/icon_512x512.png" alt="Aura Timer Icon" style="width: 44px; height: 44px; border-radius: 12px; box-shadow: 0 4px 12px rgba(255,255,255,0.2);">
+            <div class="pill-badge" style="margin-bottom: 0;">Build Your Wealth</div>
+          </div>
+          <div class="headline-text">Precision split<br>second timing</div>
+        </div>
+
+        <div class="phone-stage">
+          <div class="iphone-device">
+            <div class="dynamic-island">
+              <div class="camera-dot"></div>
+            </div>
+            <div class="app-viewport">
+              <div style="font-size: 11px; color: #a0a5b5; text-align: center; font-weight: 700;">STOPWATCH</div>
+              <div class="stopwatch-readout">01:24.89</div>
+              <div class="laps-container">
+                <div class="lap-row">
+                  <span>Lap 3</span>
+                  <span style="color: var(--lime); font-weight: 800;">00:24.12</span>
+                </div>
+                <div class="lap-row">
+                  <span>Lap 2</span>
+                  <span>00:28.45</span>
+                </div>
+                <div class="lap-row">
+                  <span>Lap 1</span>
+                  <span>00:32.32</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="press-section">
+          <div style="font-size: 12px; color: #a0a5b5; font-weight: 700;">Millisecond Precision Lap Counter</div>
+        </div>
+      </div>
+      <button class="btn-export-single" onclick="exportSingle('shot-3', 'AuraTimer_PlayStore_Shot3.png')">Download PNG (1290x2796)</button>
+      <span class="resolution-tag">Dimensions: 1290 × 2796 px</span>
+    </div>
+
+
+    <!-- SCREEN 4: Ambient Audio -->
+    <div class="screenshot-wrapper">
+      <div id="shot-4" class="screenshot-canvas bg-yellow">
+        <div class="canvas-header">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+            <img src="assets/icon_512x512.png" alt="Aura Timer Icon" style="width: 44px; height: 44px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+            <div class="pill-badge" style="margin-bottom: 0;">Learn Before You Focus</div>
+          </div>
+          <div class="headline-text">Immersive ambient<br>soundscapes</div>
+        </div>
+
+        <div class="phone-stage">
+          <div class="iphone-device" style="transform: perspective(800px) rotateY(5deg);">
+            <div class="dynamic-island">
+              <div class="camera-dot"></div>
+            </div>
+            <div class="app-viewport">
+              <div style="font-size: 13px; font-weight: 800; color: #fff;">Background Audio</div>
+              <div class="sound-row">
+                <span>🌧️ Heavy Rainfall</span>
+                <span class="check-icon">✓ ACTIVE</span>
+              </div>
+              <div class="sound-row" style="margin-top: 6px;">
+                <span>🌊 Ocean Waves</span>
+                <span style="color: #6a6f80;">SELECT</span>
+              </div>
+              <div class="sound-row" style="margin-top: 6px;">
+                <span>🌲 Deep Forest</span>
+                <span style="color: #6a6f80;">SELECT</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="press-section">
+          <div style="font-size: 12px; font-weight: 700; opacity: 0.7;">Calming Audio & Haptic Feedback</div>
+        </div>
+      </div>
+      <button class="btn-export-single" onclick="exportSingle('shot-4', 'AuraTimer_PlayStore_Shot4.png')">Download PNG (1290x2796)</button>
+      <span class="resolution-tag">Dimensions: 1290 × 2796 px</span>
+    </div>
+
+
+    <!-- SCREEN 5: Streaks & Goals -->
+    <div class="screenshot-wrapper">
+      <div id="shot-5" class="screenshot-canvas bg-dark">
+        <div class="canvas-header">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+            <img src="assets/icon_512x512.png" alt="Aura Timer Icon" style="width: 44px; height: 44px; border-radius: 12px; box-shadow: 0 4px 12px rgba(255,255,255,0.2);">
+            <div class="pill-badge" style="margin-bottom: 0;">Keep Assets Safe</div>
+          </div>
+          <div class="headline-text">Achieve your daily<br>focus goals</div>
+        </div>
+
+        <div class="phone-stage">
+          <div class="iphone-device">
+            <div class="dynamic-island">
+              <div class="camera-dot"></div>
+            </div>
+            <div class="app-viewport">
+              <div class="streak-banner">
+                <h3>🔥 7 DAY STREAK</h3>
+                <p style="font-size: 11px; color: #a0a5b5; margin-top: 4px;">Total Focus: 14h 30m</p>
+              </div>
+              <div style="font-size: 12px; font-weight: 800; color: #fff; margin-top: 8px;">Weekly Goal Progress</div>
+              <div style="height: 50px; background: #191b24; border-radius: 12px; display: flex; align-items: flex-end; justify-content: space-around; padding: 6px;">
+                <div style="width: 12%; height: 60%; background: var(--lime); border-radius: 4px;"></div>
+                <div style="width: 12%; height: 85%; background: var(--lime); border-radius: 4px;"></div>
+                <div style="width: 12%; height: 100%; background: var(--lime); border-radius: 4px;"></div>
+                <div style="width: 12%; height: 40%; background: #3a3d4c; border-radius: 4px;"></div>
+                <div style="width: 12%; height: 95%; background: var(--lime); border-radius: 4px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="press-section">
+          <div style="font-size: 12px; color: #a0a5b5; font-weight: 700;">Streak Tracker & Detailed Analytics</div>
+        </div>
+      </div>
+      <button class="btn-export-single" onclick="exportSingle('shot-5', 'AuraTimer_PlayStore_Shot5.png')">Download PNG (1290x2796)</button>
+      <span class="resolution-tag">Dimensions: 1290 × 2796 px</span>
+    </div>
+
+  </div>
+
+  <script>
+    // Export single screenshot to 1290x2796 PNG
+    function exportSingle(elementId, filename) {
+      const element = document.getElementById(elementId);
+      html2canvas(element, {
+        scale: 3, // Render at 3x for crystal clear 1290x2796 px HD resolution
+        useCORS: true,
+        backgroundColor: null
+      }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    }
+
+    // Export all 5 screenshots sequentially
+    function exportAllScreenshots() {
+      const items = [
+        { id: 'shot-1', name: 'AuraTimer_PlayStore_1.png' },
+        { id: 'shot-2', name: 'AuraTimer_PlayStore_2.png' },
+        { id: 'shot-3', name: 'AuraTimer_PlayStore_3.png' },
+        { id: 'shot-4', name: 'AuraTimer_PlayStore_4.png' },
+        { id: 'shot-5', name: 'AuraTimer_PlayStore_5.png' },
+      ];
+
+      items.forEach((item, index) => {
+        setTimeout(() => {
+          exportSingle(item.id, item.name);
+        }, index * 800);
+      });
+    }
+  </script>
+</body>
+</html>
