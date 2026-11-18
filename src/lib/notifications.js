@@ -36,15 +36,21 @@ export async function requestNotificationPermission() {
   }
 }
 
-export async function scheduleEndNotification(seconds, label) {
+export async function scheduleEndNotification(seconds, label, body) {
   try {
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: label ? `Time's up · ${label}` : "Time's up",
-        body: 'Your timer has finished.',
+        title: label || "Time's up",
+        body: body || 'Your timer has finished.',
         sound: 'default',
       },
-      trigger: { seconds: Math.max(1, Math.round(seconds)), channelId: 'timer' },
+      // `type` is required: without it expo-notifications treats this as a channel-only
+      // trigger and fires the notification immediately instead of after `seconds`.
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: Math.max(1, Math.round(seconds)),
+        channelId: 'timer',
+      },
     });
   } catch {
     // no-op

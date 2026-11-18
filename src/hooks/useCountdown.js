@@ -3,6 +3,7 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 export function useCountdown(onComplete) {
   const [remaining, setRemaining] = useState(0);
   const [total, setTotal] = useState(0);
+  const totalRef = useRef(0);
   const [isRunning, setIsRunning] = useState(false);
 
   const endTimeRef = useRef(0);
@@ -45,6 +46,7 @@ export function useCountdown(onComplete) {
 
   const start = useCallback(
     (durationMs) => {
+      totalRef.current = durationMs;
       setTotal(durationMs);
       endTimeRef.current = Date.now() + durationMs;
       completedRef.current = false;
@@ -78,6 +80,7 @@ export function useCountdown(onComplete) {
     clear();
     setRunningSynced(false);
     setRemainingSynced(0);
+    totalRef.current = 0;
     setTotal(0);
     completedRef.current = false;
   }, [setRemainingSynced, setRunningSynced]);
@@ -88,19 +91,47 @@ export function useCountdown(onComplete) {
       if (isRunningRef.current) {
         endTimeRef.current += ms;
         const rem = Math.max(0, endTimeRef.current - Date.now());
-        setTotal((t) => t + ms);
+        totalRef.current += ms;
+        setTotal(totalRef.current);
         setRemainingSynced(rem);
         return rem;
       }
       const rem = remainingRef.current + ms;
-      setTotal((t) => t + ms);
+      totalRef.current += ms;
+      setTotal(totalRef.current);
       setRemainingSynced(rem);
       return rem;
     },
     [setRemainingSynced]
   );
 
+  // Plain-object state for persisting a session across app restarts
+  const snapshot = useCallback(
+    () => ({ total: totalRef.current, running: isRunningRef.current, endAt: endTimeRef.current, remaining: remainingRef.current }),
+    []
+  );
+
+  // Picks a saved session back up. A running timer that ended while the app was closed completes immediately.
+  const restore = useCallback(
+    (snap) => {
+      clear();
+      totalRef.current = snap.total;
+      setTotal(snap.total);
+      completedRef.current = false;
+      if (snap.running) {
+        endTimeRef.current = snap.endAt;
+        setRunningSynced(true);
+        tick();
+        if (!completedRef.current) intervalRef.current = setInterval(tick, 100);
+      } else {
+        setRemainingSynced(snap.remaining);
+        setRunningSynced(false);
+      }
+    },
+    [tick, setRemainingSynced, setRunningSynced]
+  );
+
   useEffect(() => clear, []);
 
-  return { remaining, total, isRunning, start, pause, resume, reset, addTime };
+  return { remaining, total, isRunning, start, pause, resume, reset, addTime, snapshot, restore };
 }
