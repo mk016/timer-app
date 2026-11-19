@@ -38,3 +38,7 @@ yarn-error.*
 android/
 ios/
 
+
+# signing secrets
+credentials.json
+*.keystore

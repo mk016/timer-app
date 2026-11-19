@@ -40,7 +40,7 @@
       "permissions": [
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
-      "versionCode": 6
+      "versionCode": 7
     },
     "plugins": [
       "expo-notifications",
@@ -53,7 +53,8 @@
         }
       ],
       "expo-asset",
-      "./plugins/withoutAudioServices"
+      "./plugins/withoutAudioServices",
+      "./plugins/withOptionalPortrait"
     ],
     "extra": {
       "eas": {
